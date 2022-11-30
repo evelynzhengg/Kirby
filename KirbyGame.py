@@ -30,18 +30,39 @@ def appStarted(app):
     app.isGameOver = False
     app.scrollX = 0
     app.normBlocks = []
-    app.enemy1 = Enemy('chilly.gif',1,800,500)
-    app.enemy2 = Enemy('metaknight.gif',1,-300,500)
-    app.enemy3 = Boss('kingD.gif',1,1000,500)   
-    app.kirb = Kirby('normal',3,500,500)
+    app.enemy1 = Enemy('chilly',1,800,500)
+    app.enemy2 = Enemy('metaknight',1,-300,500)
+    app.enemy3 = Boss('monkey',1,1000,500)
+    app.float = app.scaleImage(app.loadImage('fly.png'),3)
+    app.floatL = app.float.transpose(Image.FLIP_LEFT_RIGHT)
+    app.walk = app.scaleImage(app.loadImage('walk.png'),3)
+    app.walkL = app.walk.transpose(Image.FLIP_LEFT_RIGHT)
+    app.suck = app.scaleImage(app.loadImage('inhale.png'),3)
+    app.suckL = app.suck.transpose(Image.FLIP_LEFT_RIGHT)
+    app.fight = app.scaleImage(app.loadImage('attack.png'),3)
+    app.fightL = app.fight.transpose(Image.FLIP_LEFT_RIGHT)
+    app.knight = app.scaleImage(app.loadImage('knight.png'),3)
+    app.knightR = app.knight.transpose(Image.FLIP_LEFT_RIGHT)
+    app.chilly = app.scaleImage(app.loadImage('chilly.png'),3)
+    app.metaknight = app.scaleImage(app.loadImage('metaknight.png'),3)
+    app.bat = app.scaleImage(app.loadImage('bat.png'),3)
+    app.monkey = app.scaleImage(app.loadImage('monkey.png'),3)
+    app.kingD = ''
+    app.kirb = Kirby('normal',3,500,app.height*0.8)
     app.kirb.nearbyEnemies.append(app.enemy1)
     app.kirb.nearbyEnemies.append(app.enemy2)
     app.kirb.nearbyEnemies.append(app.enemy3)
     app.bounds = app.kirb.getKirbyBounds()
     app.enemy3.target = app.kirb
     app.badBlocks = []
+    app.lifeBlocks = []
+    app.blocks = []
     for i in range(1):
-        app.normBlocks.append(Block('normal',300,400))  
+        app.blocks.append(Block('normal',300,400))  
+    for j in range(0):
+        app.blocks.append(badBlock('random',300,400))
+    for k in range(0):
+        app.blocks.append(lifeBlock('random',300,400))
 
 # def makeBackVisible(app):
 #     if (app.backX < app.scrollX + app.scrollMargin):
@@ -88,6 +109,7 @@ def boundsIntersect(app, boundsA, boundsB):
         return ((ax1 >= bx0) and (bx1 >= ax0) and
                 (ay1 >= by0) and (by1 >= ay0))
 
+
 def redrawAll(app, canvas):
     canvas.create_image(500,400, image=ImageTk.PhotoImage(app.back1))
     app.kirb.redrawAll(app,canvas)
@@ -97,13 +119,8 @@ def redrawAll(app, canvas):
     app.enemy2.timerFired(app)
     app.enemy3.redrawAll(app,canvas)
     app.enemy3.timerFired(app)
-    canvas.create_rectangle(app.kirb.getX()-50,app.kirb.getY()-50,app.kirb.getX()+50,app.kirb.getY()+50,outline='black')
-    canvas.create_rectangle(app.enemy1.getXpos()-50,app.enemy1.getYpos()-50,app.enemy1.getXpos()+50,app.enemy1.getYpos()+50,outline='black')
-    
-    for block in app.normBlocks:
-        if boundsIntersect(app,block.getBlockBounds(),app.kirb.getKirbyBounds()):
-            app.kirb.blocked = True
-
+    canvas.create_rectangle(app.kirb.getX()-50,app.kirb.getY()-70,app.kirb.getX()+40,app.kirb.getY()+10,outline='black')
+    canvas.create_rectangle(app.enemy2.getXpos()-100,app.enemy2.getYpos()-90,app.enemy2.getXpos()+40,app.enemy2.getYpos(),outline='black')
 
     if app.isGameOver:
         canvas.create_rectangle(app.width//4,app.height//4,
@@ -113,9 +130,9 @@ def redrawAll(app, canvas):
 
 
     # draw the dots, shifted by the scrollX offset
-    for block in app.normBlocks:
-        # block.x -= app.scrollX# <-- This is where we scroll each dot!!!
+    for block in app.blocks:
         block.redrawAll(app,canvas)
+
 
     # draw the instructions and the current scrollX
     x = app.width/2
