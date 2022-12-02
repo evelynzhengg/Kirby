@@ -89,29 +89,64 @@ class Boss(Enemy):
         self.movingRight = False
         self.movingLeft = False
         self.target = []
-        self.lives = 5
+        self.lives = lives
+        self.walk = True
+        self.Crush = False
+        self.Jump = False
+        self.vy = 0
+        self.up = 10
+        self.ground = 550
     
     def movePlayer(self,app, dx):
         self.x += dx
 
+    def getEnemyBounds(self):
+        (x0,y0,x1,y1) = (0,0,0,0)
+        (x0,y0) = (self.x - 50, self.y - 70)
+        (x1,y1) = (self.x + 50, self.y + 50)
+        return (x0,y0,x1,y1)
+            
+    def deductLife(self):
+        self.lives -= 1
+
+    def drawLives(self,canvas, lives):
+        cx,cy = self.x, self.y - 75
+        for i in range(lives):
+            canvas.create_rectangle(cx+20*i,cy,cx+20*(i+1),cy+20,fill = 'orange')
+        canvas.create_text(cx-10,cy+10,text = f'{self.lives} x', fill = 'black')
+
     def patrol(self,app):
         distance = self.target.getX() - self.getXpos()
-        if abs(distance) < 200:
+        if abs(distance) < 400:
             if distance < 0: 
                 self.movingLeft = True
                 self.movingRight = False
-                self.movePlayer(app,-1*random.randint(3, 9))
+                self.slam(app)
+                self.movePlayer(app,-1*random.randint(1, 5))
             else:
                 self.movingRight = True
                 self.movingLeft = False
-                self.movePlayer(app,random.randint(3, 9))
+                self.slam(app)
+                self.movePlayer(app,random.randint(1, 5))
 
-    # def jump(self,app):
-    
-    # def slam(self,app):
+    def jump(self,app):
+        if self.target.jumping == True:
+            self.Jump = True
+            self.vy += self.up
+            if self.movingLeft == True:
+                self.movePlayer(app,-1*random.randint(1, 5))
+            else:
+                self.movePlayer(app,-1*random.randint(1, 5))
+
+    def slam(self,app):
+        self.Crush = True
+        distance = self.target.getX() - self.getXpos()
+        if abs(distance) < 100:
+            self.target.lives -= 1
 
     def timerFired(self,app):
-        self.patrol(self)
+        self.patrol(app)
+        self.jump(app)
         if self.vy != 0:
             self.y -= self.vy
         if self.y == app.height*0.75 or self.y - self.vy > app.height*0.75:
@@ -120,8 +155,15 @@ class Boss(Enemy):
             self.vy -= 2
             self.y -= self.vy
 
-    # def redrawAll(self,app,canvas):
-    #     canvas.create_image(self.x,self.y, image=ImageTk.PhotoImage(app.kingD))
-
-
+    def redrawAll(self,app,canvas):
+        if self.Jump == True:
+            canvas.create_image(self.x,self.y, image=ImageTk.PhotoImage(app.kingJump))   
+        elif self.Crush == True:
+            if self.movingLeft:
+                canvas.create_image(self.x,self.y, image=ImageTk.PhotoImage(app.kingCrush))
+            else:
+                canvas.create_image(self.x,self.y, image=ImageTk.PhotoImage(app.kingCrushR))
+        else:
+            canvas.create_image(self.x,self.y, image=ImageTk.PhotoImage(app.king))
+        self.drawLives(canvas,self.lives)
 

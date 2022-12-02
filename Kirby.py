@@ -24,12 +24,17 @@ class Kirby:
         self.vy = 0
         self.moveR = 15
         self.moveL = 15
-        self.up = 15
+        self.up = 20
         self.ground = y
         self.topB = False
         self.added = False
         self.state = 'R'
         self.bounds = 0
+        self.canL = True
+        self.canR = True
+        self.canU = True
+        self.canJ = True
+        self.goingDown = False
 
     def getX(self):
         return self.x
@@ -37,7 +42,7 @@ class Kirby:
     def getY(self):
         return self.y
 
-    def getKirbyBounds(self):
+    def getKirbyBounds(self,app):
         (x0,y0) = (self.x - 50, self.y - 70)
         (x1,y1) = (self.x + 40, self.y + 10)
         self.bounds = (x0,y0,x1,y1)
@@ -45,14 +50,15 @@ class Kirby:
 
     def jump(self):
         self.jumping = True
-        self.vy += self.up 
+        if self.canJ:
+            self.vy += self.up
 
     def timerFired(self,app):
-        # self.spriteCounter = (1 + self.spriteCounter) % len(self.kirbState())
         self.eat()
-        self.touched()
-        self.punch()
+        self.touched(app)
+        self.punch(app)
         self.sword()
+        self.getKirbyBounds(app)
         if self.vy != 0:
             self.y -= self.vy
             self.jumping = True
@@ -64,12 +70,13 @@ class Kirby:
             if self.topB == False:
                 self.y -= self.vy
             self.jumping = True
+
+
         for block in app.blocks:
-            boundsA = self.getKirbyBounds()
+            boundsA = self.getKirbyBounds(app)
             boundsB = block.getBlockBounds(app)
-            if type(block) != badBlock and type(block) != lifeBlock:
-                self.blockDistance(app,boundsA,boundsB)
-            elif type(block) == badBlock:
+            
+            if type(block) == badBlock:
                 if block.touched == False:
                     block.touched = self.boundsIntersect(boundsA,boundsB)
                 else:
@@ -78,10 +85,10 @@ class Kirby:
                 if block.claimed == False:
                     block.claimed = self.boundsIntersect(boundsA,boundsB)
                 if block.added == False and block.claimed == True:
-                    print('come')
                     self.lives += 1
                     block.added = True
-     
+            else:
+                self.blockDistance(app,boundsA,boundsB)
 
     def boundsIntersect(self, boundsA, boundsB):
     # return l2<=r1 and t2<=b1 and l1<=r2 and t1<=b2
@@ -96,22 +103,34 @@ class Kirby:
     def blockDistance(self, app, boundsA, boundsB):
         (ax0, ay0, ax1, ay1) = boundsA #kirb
         (bx0, by0, bx1, by1) = boundsB #block
-        print(f'{boundsA} bound A')
-        print(f'{boundsB} bound B')
-        if abs(bx1-ax0) < 15: 
+        # print(f'{boundsA} bound A')
+        # print(f'{boundsB} bound B')
+      
+        if ax0-bx1 < 15 and ax0-bx1 >= 0: 
             self.moveL = abs(bx1-ax0)
-            print('left')
-        if abs(bx0-ax1) < 15: #no abs no if 
+        elif (ax0 + self.moveL +5 >= bx0 and ax0 + self.moveL +5<= bx1) or ((ax0+ax1)/2 +self.moveL >=bx0 and (ax0+ax1)/2 +self.moveL <=bx1):
+            if (ay0+ay1)/2>=by0 and (ay0+ay1)/2<=by0:
+                self.canL = False
+            else:
+                self.canL = True
+        if bx0-ax1 < 15 and bx0-ax1 >= 0: 
             self.moveR = abs(bx0-ax1)
-            print('right')
-        if abs(ay0-by1) < 15: 
+        elif (ax1 + self.moveR +5 >= bx0 and ax1 + self.moveR +5 <= bx1) or ((ax0+ax1)/2 +self.moveR >=bx0 and (ax0+ax1)/2 +self.moveR <=bx1):
+            if (ay0+ay1)/2>=by0 and (ay0+ay1)/2<=by0:
+                self.canR = False
+            else:
+                self.canR = True
+        if ay0-by1 < 15 and ay0-by1 >= 0 and (ax0+ax1)/2 >= bx0 and (ax0+ax1)/2 <= bx1: 
             self.up = abs(ay0-by1)
-            print('up')
-            self.vy = 0
-        if (ay1 <= by0 and ay1 >= by0-self.vy) and (ax0 >= bx0 and ax1<=bx1):
-            self.ground = by0
-            self.vy = 0
-            self.topB = True
+            
+        elif ay0-self.vy <= by1 and ay0-self.vy >= by0 and (ax0+ax1)/2 >= bx0 and (ax0+ax1)/2 <= bx1:
+            self.canJ = False
+
+        if (ay1 >= by0 or ay1 >= by0-self.vy) and ((ax0+ax1)/2 >= bx0 and (ax0+ax1)/2<=bx1):
+            if (ay0+ay1)/2 >= by0 and (ay0+ay1)/2 <= by1: 
+                self.ground = by0
+                self.vy = 0
+                self.topB = True
         else:
             self.ground= app.height*0.8
             self.moveL = 15
@@ -127,7 +146,6 @@ class Kirby:
             self.scrollX = self.x - app.width + self.scrollMargin
         if self.x > app.width - self.scrollMargin:
             self.x = app.width - self.scrollMargin
-            print('call')
         if self.x < self.scrollMargin:
             self.x = self.scrollMargin
 
@@ -152,41 +170,25 @@ class Kirby:
 
     def keyPressed(self, app, event):
         if (event.key == "Left"):
-            for block in app.blocks:
-                boundsA = self.getKirbyBounds()
-                boundsB = block.getBlockBounds(app)
-                if type(block) != badBlock and type(block) != lifeBlock:
-                    self.blockDistance(app,boundsA,boundsB)
-            self.movePlayer(app, -1*self.moveL)
-            self.scrollX -= self.moveL
+            if self.canL:
+                self.movePlayer(app, -1*self.moveL)
+                app.scrollX -= 5
             self.eating = False
             self.attacking = False
             self.state = 'L'
+            # self.canL = True
 
         elif (event.key == "Right"):
-            smallR = 100
-            for block in app.blocks:
-                boundsA = self.getKirbyBounds()
-                boundsB = block.getBlockBounds(app)
-                if type(block) != badBlock and type(block) != lifeBlock:
-                    (moveR,moveL,moveUp) = self.blockDistance(app,boundsA,boundsB)
-                    if moveR < smallR:
-                        smallR = moveR
-                        self.moveR = smallR
-                        print(self.moveR)
-            self.movePlayer(app, self.moveR)
-            self.scrollX += self.moveR
+            if self.canR:
+                self.movePlayer(app, self.moveR)
+                app.scrollX += 5
             self.eating = False
             self.attacking = False
             self.state = 'R'
-
+            # self.canR = True
         elif (event.key == "Up"):
-            for block in app.blocks:
-                boundsA = self.getKirbyBounds()
-                boundsB = block.getBlockBounds(app)
-                if type(block) != badBlock and type(block) != lifeBlock:
-                    self.blockDistance(app,boundsA,boundsB)
             self.jump()
+            self.canJ = True
         elif (event.key == 'x'):
             self.eating = True   
         elif (event.key == 'z'):
@@ -204,7 +206,8 @@ class Kirby:
         for enemy in self.nearbyEnemies:
             if self.eating == True:
                 if abs(enemy.getXpos() - self.getX()) < 100:
-                    enemy.lives = 0
+                    if type(enemy) != Boss:
+                        enemy.lives -= 1
                     enemy.eaten = True
                 if enemy.kind == 'metaknight.gif':
                     self.slashing = True
@@ -216,29 +219,27 @@ class Kirby:
                     enemy.lives -= 1
         self.slashing = False
 
-    def punch(self):
+    def punch(self,app):
         for enemy in self.nearbyEnemies:
             if self.attacking == True:
                 if abs(enemy.getXpos() - self.getX()) < 40:
                     enemy.lives -= 1
         self.attacking == False
 
-    def touched(self):
+    def touched(self,app):
         if self.eating == False and self.attacking == False:
             for enemy in self.nearbyEnemies:
-                intersected = self.boundsIntersect(self.getKirbyBounds(),enemy.getEnemyBounds())
+                intersected = self.boundsIntersect(self.getKirbyBounds(app),enemy.getEnemyBounds())
                 if intersected == True and enemy.lives > 0:
-                    enemy.lives = 0
+                    enemy.lives -= 1
                     self.deductLife()
 
     def redrawAll(self,app, canvas):
         # if self.eating == True and self.slashing == True:
         #     spritePhotoImage = self.loadAnimatedGif(self.knight)
         if app.kirb.attacking == True:
-            if self.state == 'R':
-                canvas.create_image(app.kirb.x, app.kirb.y, image=ImageTk.PhotoImage(app.fight))
-            else:
-                canvas.create_image(app.kirb.x, app.kirb.y, image=ImageTk.PhotoImage(app.fightL))
+            canvas.create_image(app.kirb.x, app.kirb.y, image=ImageTk.PhotoImage(app.fight))
+            canvas.create_image(app.kirb.x, app.kirb.y, image=ImageTk.PhotoImage(app.fightL))
         elif app.kirb.eating == True and self.slashing == True:
             if self.state == 'R':
                 canvas.create_image(app.kirb.x, app.kirb.y, image=ImageTk.PhotoImage(app.knightR))
