@@ -10,6 +10,7 @@ class Enemy:
         self.spriteCounter = 0
         self.eaten = False
         self.vy = 6
+        self.col = 0
 
     def getXpos(self):
         return self.x
@@ -19,12 +20,11 @@ class Enemy:
 
     def timerFired(self,app):
         if self.kind == 'chilly': 
-            self.x -= 5
+            self.x -= random.randint(4,7)
         elif self.kind == 'metaknight':
-            self.x += 10
+            self.x += random.randint(10,15)
         elif self.kind == 'monkey':
-            self.y = random.randint(0,800)
-            self.x = random.randint(0,1000)
+            self.x += random.randint(-4,6)
         elif self.kind == 'bat':
             self.x = random.randint(0,800)
             self.y = app.height/2
@@ -53,6 +53,10 @@ class Enemy:
         elif self.kind == 'bat':
             (x0,y0) = (self.x - 70, self.y - 40)
             (x1,y1) = (self.x + 70, self.y+40)
+        
+        elif self.kind == 'sparky':
+            (x0,y0) = (self.x - 50, self.y - 50)
+            (x1,y1) = (self.x + 50, self.y+50)
 
         return (x0,y0,x1,y1)
 
@@ -77,6 +81,8 @@ class Enemy:
                 canvas.create_image(self.x,self.y, image=ImageTk.PhotoImage(app.monkey))
             elif self.kind == 'bat':
                 canvas.create_image(self.x,self.y, image=ImageTk.PhotoImage(app.bat))
+            elif self.kind == 'sparky':
+                canvas.create_image(self.x,self.y, image=ImageTk.PhotoImage(app.sparky))
         
     def deductLife(self):
         self.lives -= 1
@@ -96,6 +102,7 @@ class Boss(Enemy):
         self.vy = 0
         self.up = 10
         self.ground = 550
+        self.col = 0
     
     def movePlayer(self,app, dx):
         self.x += dx
@@ -132,11 +139,15 @@ class Boss(Enemy):
     def jump(self,app):
         if self.target.jumping == True:
             self.Jump = True
+            self.up = self.target.y-self.ground
             self.vy += self.up
             if self.movingLeft == True:
                 self.movePlayer(app,-1*random.randint(1, 5))
             else:
                 self.movePlayer(app,-1*random.randint(1, 5))
+            self.Jump = False
+        else:
+            self.Jump = False
 
     def slam(self,app):
         self.Crush = True
@@ -152,7 +163,7 @@ class Boss(Enemy):
         if self.y == app.height*0.75 or self.y - self.vy > app.height*0.75:
             self.vy = 0
         else:
-            self.vy -= 2
+            self.vy -= 3
             self.y -= self.vy
 
     def redrawAll(self,app,canvas):

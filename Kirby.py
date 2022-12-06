@@ -12,12 +12,15 @@ class Kirby:
         self.walk = ''
         self.suck = ''
         self.fight = ''
-        # self.knight = 'kirbyknight.gif'
+        self.knight = 'kirbyknight.gif'
         self.spriteCounter = 0
         self.jumping = False
         self.eating = False
         self.attacking = False
-        self.slashing = True
+        self.slashing = False
+        self.hiding = False
+        self.shocking = False
+        self.eaten = [] #append enemies always check for last one 
         self.nearbyEnemies = []
         self.scrollX = 0
         self.scrollMargin = 20
@@ -30,11 +33,14 @@ class Kirby:
         self.added = False
         self.state = 'R'
         self.bounds = 0
+        self.stop = False
         self.canL = True
         self.canR = True
         self.canU = True
         self.canJ = True
         self.goingDown = False
+        self.slashed = []
+        self.shocked = []
 
     def getX(self):
         return self.x
@@ -59,34 +65,56 @@ class Kirby:
         self.punch(app)
         self.sword()
         self.getKirbyBounds(app)
-        if self.vy != 0:
-            self.y -= self.vy
-            self.jumping = True
-        if self.bounds[3] >= self.ground:
-            self.vy = 0
-            self.jumping = False
-        else:
-            self.vy -= 3
-            if self.topB == False:
+        for i in range(2):
+            if self.vy != 0 and self.stop:
                 self.y -= self.vy
-            self.jumping = True
+            if self.stop == False:
+                if self.y == app.height*0.8 or self.y - self.vy > app.height*0.8:
+                    self.vy = 0
+                    self.jumping = False
+                else:
+                    self.vy -= 2
+                    if self.topB == False:
+                        self.y -= self.vy
+                    self.jumping = True
+        # if self.vy != 0:
+        #     self.y -= self.vy
+        #     self.jumping = True
+        # if self.bounds[3] >= self.ground:
+        #     self.vy = 0
+        #     self.jumping = False
+        # else:
+        #     self.vy -= 3
+        #     if self.topB == False:
+        #         self.y -= self.vy
+        #     self.jumping = True
 
 
         for block in app.blocks:
             boundsA = self.getKirbyBounds(app)
             boundsB = block.getBlockBounds(app)
-            
+        
             if type(block) == badBlock:
                 if block.touched == False:
                     block.touched = self.boundsIntersect(boundsA,boundsB)
                 else:
                     self.nearbyEnemies.append(block.newE)
+
+            elif type(block) == hideBlock:
+                if block.claimed == False:
+                    block.claimed = self.boundsIntersect(boundsA,boundsB)
+                    # self.hiding = True
+
             elif type(block) == lifeBlock:
                 if block.claimed == False:
                     block.claimed = self.boundsIntersect(boundsA,boundsB)
                 if block.added == False and block.claimed == True:
                     self.lives += 1
                     block.added = True
+
+            elif type(block) == Portal:
+                app.ready = self.boundsIntersect(boundsA,boundsB)
+            
             else:
                 self.blockDistance(app,boundsA,boundsB)
 
@@ -105,37 +133,47 @@ class Kirby:
         (bx0, by0, bx1, by1) = boundsB #block
         # print(f'{boundsA} bound A')
         # print(f'{boundsB} bound B')
-      
-        if ax0-bx1 < 15 and ax0-bx1 >= 0: 
-            self.moveL = abs(bx1-ax0)
-        elif (ax0 + self.moveL +5 >= bx0 and ax0 + self.moveL +5<= bx1) or ((ax0+ax1)/2 +self.moveL >=bx0 and (ax0+ax1)/2 +self.moveL <=bx1):
-            if (ay0+ay1)/2>=by0 and (ay0+ay1)/2<=by0:
-                self.canL = False
-            else:
-                self.canL = True
-        if bx0-ax1 < 15 and bx0-ax1 >= 0: 
-            self.moveR = abs(bx0-ax1)
-        elif (ax1 + self.moveR +5 >= bx0 and ax1 + self.moveR +5 <= bx1) or ((ax0+ax1)/2 +self.moveR >=bx0 and (ax0+ax1)/2 +self.moveR <=bx1):
-            if (ay0+ay1)/2>=by0 and (ay0+ay1)/2<=by0:
-                self.canR = False
-            else:
-                self.canR = True
-        if ay0-by1 < 15 and ay0-by1 >= 0 and (ax0+ax1)/2 >= bx0 and (ax0+ax1)/2 <= bx1: 
-            self.up = abs(ay0-by1)
-            
-        elif ay0-self.vy <= by1 and ay0-self.vy >= by0 and (ax0+ax1)/2 >= bx0 and (ax0+ax1)/2 <= bx1:
-            self.canJ = False
-
-        if (ay1 >= by0 or ay1 >= by0-self.vy) and ((ax0+ax1)/2 >= bx0 and (ax0+ax1)/2<=bx1):
-            if (ay0+ay1)/2 >= by0 and (ay0+ay1)/2 <= by1: 
-                self.ground = by0
-                self.vy = 0
-                self.topB = True
+        if self.boundsIntersect(boundsA,boundsB):
+            print('dogs')
+            self.stop = True
+            self.ground = by0
+            self.y = by0
+            self.vy = 0
         else:
-            self.ground= app.height*0.8
-            self.moveL = 15
-            self.moveR = 15
-            self.up = 15
+            self.stop = False
+
+        # if ax0-bx1 < 15 and ax0-bx1 >= 0: 
+        #     self.moveL = abs(bx1-ax0)
+        # elif (ax0 + self.moveL +5 >= bx0 and ax0 + self.moveL +5<= bx1) or ((ax0+ax1)/2 +self.moveL >=bx0 and (ax0+ax1)/2 +self.moveL <=bx1):
+        #     if (ay0+ay1)/2>=by0 and (ay0+ay1)/2<=by0:
+        #         self.canL = False
+        #     else:
+        #         self.canL = True
+        # if bx0-ax1 < 15 and bx0-ax1 >= 0: 
+        #     self.moveR = abs(bx0-ax1)
+        # elif (ax1 + self.moveR +5 >= bx0 and ax1 + self.moveR +5 <= bx1) or ((ax0+ax1)/2 +self.moveR >=bx0 and (ax0+ax1)/2 +self.moveR <=bx1):
+        #     if (ay0+ay1)/2>=by0 and (ay0+ay1)/2<=by0:
+        #         self.canR = False
+        #     else:
+        #         self.canR = True
+        # if ay0-by1 < 15 and ay0-by1 >= 0 and (ax0+ax1)/2 >= bx0 and (ax0+ax1)/2 <= bx1: 
+        #     self.up = abs(ay0-by1)
+            
+        # elif ay0-self.vy <= by1 and ay0-self.vy >= by0 and (ax0+ax1)/2 >= bx0 and (ax0+ax1)/2 <= bx1:
+        #     self.canJ = False
+
+        # if (ay1 >= by0 or ay1 >= by0-self.vy) and ((ax0+ax1)/2 >= bx0 and (ax0+ax1)/2<=bx1):
+        #     if (ay0+ay1)/2 >= by0 and (ay0+ay1)/2 <= by1: 
+        #         print('come in ')
+        #         self.ground = by0
+        #         print(self.ground)
+        #         self.vy = 0
+        #         self.topB = True
+        # else:
+        #     self.ground= app.height*0.8
+        #     self.moveL = 15
+        #     self.moveR = 15
+        #     self.up = 15
         return(self.moveR,self.moveL,self.up)
 
     def makePlayerVisible(self,app):
@@ -154,47 +192,39 @@ class Kirby:
         self.x += dx  
         self.makePlayerVisible(app)
 
-    def loadAnimatedGif(self,path):
-    # load first sprite outside of try/except to raise file-related exceptions
-        spritePhotoImages = [ PhotoImage(file=path, format='gif -index 0') ]
-        i = 1
-        while True:
-            try:
-                spritePhotoImages.append(PhotoImage(file=path,
-                                                format=f'gif -index {i}'))
-                i += 1
-            except Exception as e:
-                return spritePhotoImages
-
     
 
     def keyPressed(self, app, event):
         if (event.key == "Left"):
             if self.canL:
-                self.movePlayer(app, -1*self.moveL)
+                #self.movePlayer(app, -1*self.moveL)
                 app.scrollX -= 5
             self.eating = False
             self.attacking = False
             self.state = 'L'
-            # self.canL = True
 
         elif (event.key == "Right"):
             if self.canR:
-                self.movePlayer(app, self.moveR)
+                #self.movePlayer(app, self.moveR)
                 app.scrollX += 5
             self.eating = False
             self.attacking = False
             self.state = 'R'
-            # self.canR = True
+
         elif (event.key == "Up"):
             self.jump()
-            self.canJ = True
         elif (event.key == 'x'):
             self.eating = True   
         elif (event.key == 'z'):
             self.attacking = True
         elif (event.key == "Down"):
-            self.slashing == True
+            if len(self.eaten) != 0:
+                if self.eaten[len(self.eaten)-1] == 'metaknight':
+                    self.slashing = True  
+                    self.eating = False          
+                elif self.eaten[len(self.eaten)-1] == 'sparky':
+                    self.shocking = True
+                    self.eating = False
 
     def drawLives(self,canvas, lives):
         cx,cy = self.x, self.y - 75
@@ -208,16 +238,35 @@ class Kirby:
                 if abs(enemy.getXpos() - self.getX()) < 100:
                     if type(enemy) != Boss:
                         enemy.lives -= 1
-                    enemy.eaten = True
-                if enemy.kind == 'metaknight.gif':
-                    self.slashing = True
-    
+                        if enemy.lives >= 0:
+                            self.eaten.append(enemy.kind)
+
+
+
     def sword(self):
         for enemy in self.nearbyEnemies:
-            if self.slashing == True:
+            if self.slashing == True and self.attacking == True:
+                if enemy.getXpos() - self.getX() < 150 and enemy.getXpos() - self.getX() >= 0:
+                    if self.state == 'R':
+                        enemy.lives -= 1
+                        if enemy.lives == 0:
+                            self.slashed.append(enemy)
+                elif abs(enemy.getXpos() - self.getX()) < 150:
+                    enemy.lives -= 1
+                    if enemy.lives == 0:
+                        self.slashed.append(enemy)
+
+        if len(self.slashed) > 1:
+            self.slashing = False
+    
+    def shock(self):
+        for enemy in self.nearbyEnemies:
+            if self.shocking == True:
                 if abs(enemy.getXpos() - self.getX()) < 80:
                     enemy.lives -= 1
-        self.slashing = False
+                    self.shocked.append(enemy)
+        if len(self.slashed) > 1:
+            self.slashing = False
 
     def punch(self,app):
         for enemy in self.nearbyEnemies:
@@ -230,21 +279,38 @@ class Kirby:
         if self.eating == False and self.attacking == False:
             for enemy in self.nearbyEnemies:
                 intersected = self.boundsIntersect(self.getKirbyBounds(app),enemy.getEnemyBounds())
-                if intersected == True and enemy.lives > 0:
-                    enemy.lives -= 1
-                    self.deductLife()
+                if intersected == True and enemy.lives > 0 and self.hiding == False:
+                    if self.slashing == False and self.shocking == False:
+                        enemy.col += 1
+                        if type(enemy) == Boss and enemy.col == 7:
+                            self.deductLife()
+                            enemy.col == 0
+                        elif enemy.col == 5:
+                            self.deductLife()
+                    else:
+                        self.slashing == False and self.shocking == False
+                    
 
     def redrawAll(self,app, canvas):
-        # if self.eating == True and self.slashing == True:
-        #     spritePhotoImage = self.loadAnimatedGif(self.knight)
-        if app.kirb.attacking == True:
-            canvas.create_image(app.kirb.x, app.kirb.y, image=ImageTk.PhotoImage(app.fight))
-            canvas.create_image(app.kirb.x, app.kirb.y, image=ImageTk.PhotoImage(app.fightL))
-        elif app.kirb.eating == True and self.slashing == True:
+        if self.slashing and self.attacking:
+            if self.state == 'R':
+                canvas.create_image(app.kirb.x, app.kirb.y, image=ImageTk.PhotoImage(app.knightAR))
+            else:
+                canvas.create_image(app.kirb.x, app.kirb.y, image=ImageTk.PhotoImage(app.knightA))
+        elif (self.slashing == True or (self.slashing and self.walking)) and not self.attacking:
             if self.state == 'R':
                 canvas.create_image(app.kirb.x, app.kirb.y, image=ImageTk.PhotoImage(app.knightR))
             else:
                 canvas.create_image(app.kirb.x, app.kirb.y, image=ImageTk.PhotoImage(app.knight))
+        elif self.shocking and self.attacking:
+            canvas.create_image(app.kirb.x, app.kirb.y, image=ImageTk.PhotoImage(app.sparkedA))
+        elif (self.slashing == True or (self.slashing and self.walking)) and not self.attacking:
+            canvas.create_image(app.kirb.x, app.kirb.y, image=ImageTk.PhotoImage(sparked))
+        elif self.attacking == True:
+            canvas.create_image(app.kirb.x, app.kirb.y, image=ImageTk.PhotoImage(app.fight))
+            canvas.create_image(app.kirb.x, app.kirb.y, image=ImageTk.PhotoImage(app.fightL))
+        elif self.hiding == True:
+            canvas.create_image(app.kirb.x, app.kirb.y, image=ImageTk.PhotoImage(app.hide))
         elif app.kirb.eating == True:
             if self.state == 'R':
                 canvas.create_image(app.kirb.x, app.kirb.y, image=ImageTk.PhotoImage(app.suck))
