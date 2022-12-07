@@ -18,6 +18,12 @@ class Enemy:
     def getYpos(self):
         return self.y
 
+    def keyPressed(self,app,event):
+        if event.key == 'Right':
+            self.x -= 15
+        elif event.key == 'Left':
+            self.x += 15
+
     def timerFired(self,app):
         if self.kind == 'chilly': 
             self.x -= random.randint(4,7)
@@ -59,17 +65,6 @@ class Enemy:
             (x1,y1) = (self.x + 50, self.y+50)
 
         return (x0,y0,x1,y1)
-
-    def loadAnimatedGif(self,path):
-        spritePhotoImages = [ PhotoImage(file=path, format='gif -index 0') ]
-        i = 1
-        while True:
-            try:
-                spritePhotoImages.append(PhotoImage(file=path,
-                                                format=f'gif -index {i}'))
-                i += 1
-            except Exception as e:
-                return spritePhotoImages
 
     def redrawAll(self,app, canvas):
         if self.lives > 0 and self.eaten == False:
@@ -115,6 +110,13 @@ class Boss(Enemy):
             
     def deductLife(self):
         self.lives -= 1
+    
+    def keyPressed(self,app,event):
+        if event.key == 'Right':
+            print('this is mov')
+            self.x -= 15
+        elif event.key == 'Left':
+            self.x += 15
 
     def drawLives(self,canvas, lives):
         cx,cy = self.x, self.y - 75
@@ -124,7 +126,7 @@ class Boss(Enemy):
 
     def patrol(self,app):
         distance = self.target.getX() - self.getXpos()
-        if abs(distance) < 400:
+        if abs(distance) < 200:
             if distance < 0: 
                 self.movingLeft = True
                 self.movingRight = False
@@ -137,7 +139,7 @@ class Boss(Enemy):
                 self.movePlayer(app,random.randint(1, 5))
 
     def jump(self,app):
-        if self.target.jumping == True:
+        if self.target.jumping == True and self.y > 0:
             self.Jump = True
             self.up = self.target.y-self.ground
             self.vy += self.up
@@ -152,19 +154,22 @@ class Boss(Enemy):
     def slam(self,app):
         self.Crush = True
         distance = self.target.getX() - self.getXpos()
-        if abs(distance) < 100:
+        if abs(distance) < 100 and self.target.attacking == False:
             self.target.lives -= 1
 
     def timerFired(self,app):
         self.patrol(app)
-        self.jump(app)
-        if self.vy != 0:
-            self.y -= self.vy
-        if self.y == app.height*0.75 or self.y - self.vy > app.height*0.75:
-            self.vy = 0
+        if (self.y > 0):
+            if self.vy != 0:
+                self.y -= self.vy
+            if (self.y >= app.height*0.75) or self.y - self.vy > app.height*0.75:
+                self.vy = 0
+            else:
+                self.vy -= 3
+                self.y -= self.vy
         else:
-            self.vy -= 3
-            self.y -= self.vy
+            self.y = 50
+            self.vy = 0
 
     def redrawAll(self,app,canvas):
         if self.Jump == True:

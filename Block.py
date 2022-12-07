@@ -14,17 +14,23 @@ class Block:
         self.enemyTypes = ['chilly','metaknight','monkey','bat','sparky']
         self.newE = Enemy(self.enemyTypes[random.randint(0,4)],1,self.x,self.y)
         self.scrollX = 0
+        #added a self.inView to check if the block is in vision of kirby/player
+        self.inView = True
     
     def getBlockBounds(self,app):
         (x0,y0) = (self.x-self.blockWidth/2.75-app.scrollX, (self.y - self.blockHeight*2.25))
         (x1,y1) = (self.x + self.blockWidth/2-app.scrollX, (self.y-self.blockHeight))
         return (x0,y0,x1,y1)
 
+    def timerFired(self,app):
+        if (self.x - app.scrollX > app.kirb.getX() or self.x - app.scrollX < app.kirb.getX()):
+            self.inView = False
 
     def redrawAll(self,app,canvas):
         (x0,y0,x1,y1) = self.getBlockBounds(app)
-        canvas.create_image(self.x-app.scrollX, self.y, image=ImageTk.PhotoImage(app.block))
-        self.scrollX = app.scrollX
+        if (self.inView):
+            canvas.create_image(self.x-app.scrollX, self.y, image=ImageTk.PhotoImage(app.block))
+            self.scrollX = app.scrollX
 
 class badBlock(Block):
     def __init__(self,kind,x,y):

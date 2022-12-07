@@ -7,7 +7,7 @@ from Block import *
 def appStarted(app):
     startP = 'startPage.png' #screenshot taken from https://kbhgames.com/game/kirby-nightmare-dream-land
     app.startPage = app.loadImage(startP)
-    app.startPage = app.scaleImage(app.startPage,0.5)
+    app.startPage = app.scaleImage(app.startPage,0.8)
     url = 'https://bghq.com/bgs/gba/k/knd/001.png' #this image was taken from https://bghq.com/bgs/gba/k/knd/001.png
     app.back1 = app.loadImage(url)
     app.back1 = app.scaleImage(app.back1,6)
@@ -70,7 +70,7 @@ def appStarted(app):
     app.background = app.loadImage(back)
     app.kirb.nearbyEnemies.append(app.boss)
     app.placedE = []
-    app.enemyKinds = ['chilly','metaknight','sparky','monkey']
+    app.enemyKinds = ['chilly','metaknight','sparky','monkey','bat']
     for i in range(app.level*3):
         app.blocks.append((Block('normal',(i+1)*300,400)))
     for i in range(app.level*6):
@@ -84,20 +84,22 @@ def appStarted(app):
         app.placedE.append(newE)
         app.kirb.nearbyEnemies.append(newE)
     app.mode = 'startScreen'
+    app.timer = 0
 
 def startScreen_redrawAll(app, canvas):
-    canvas.create_image(app.width//2,app.height//4, 
+    canvas.create_image(app.width//2,app.height//2, 
                     image=ImageTk.PhotoImage(app.startPage))
-    canvas.create_text(app.width//2, app.height//2,
-                       text='Press control-q to begin', fill='black',
-                       font = ('Ariel',40))
+
+def startScreen_keyPressed(app,event):
+    if event.key == "Space":
+        app.mode = 'boss'
 
 def startScreen_mousePressed(app,event):
-    if event.x > 0 and event.y > 0:
+    if event.x > 300 and event.x < 750 and event.y > 575 and event.y < 625:
         app.mode = 'game'
 
 def addBlock(app):
-    if app.scrollX == 800:
+    if app.scrollX >= 800:
         app.level += 1
         app.blocks = []
         for i in range(app.level*2):
@@ -108,20 +110,26 @@ def addBlock(app):
             app.blocks.append((lifeBlock('normal',(i+1)*250,400))) 
             app.lifeBlocks += app.level*2
         app.scrollX = 0
-    if app.level == 1 and app.scrollX == 600:
+    if app.level == 3 and app.scrollX == 600:
         app.blocks.append(Portal('normal',800,500))
 
-def game_timerFired(app):   
+def game_timerFired(app):
+    app.bounds = app.kirb.getKirbyBounds(app)
     app.kirb.timerFired(app)
     if app.kirb.lives == 0:
         app.isGameOver = True
     addBlock(app)
+    app.timer += 0.5
 
 
 def game_keyPressed(app, event):
+    app.kirb.timerFired(app)
     app.kirb.keyPressed(app,event)
-    if event.key == 'Space' and app.ready:
+    for enemy in app.kirb.nearbyEnemies:
+        enemy.keyPressed(app,event)
+    if app.ready:
         app.mode = 'boss'
+
 
     
 
@@ -134,12 +142,18 @@ def boundsIntersect(app, boundsA, boundsB):
 
 
 def game_redrawAll(app, canvas):
+
     if app.level == 1:
         canvas.create_image(500,400, image=ImageTk.PhotoImage(app.back1))
     elif app.level == 2:
         canvas.create_image(500,400, image=ImageTk.PhotoImage(app.back2))
     elif app.level == 3:
         canvas.create_image(500,400, image=ImageTk.PhotoImage(app.back3))
+    canvas.create_text(60,50,text=f'LEVEL {app.level}', font='Helvetica 26',
+                        fill = 'blue')
+    canvas.create_text(60,80,text=f'TIME PLAYED: {app.timer}', font='Helvetica 26',
+                        fill = 'blue')
+
     app.kirb.redrawAll(app,canvas)
     app.enemy1.redrawAll(app,canvas)
     app.enemy1.timerFired(app)
@@ -148,8 +162,8 @@ def game_redrawAll(app, canvas):
     app.enemy3.redrawAll(app,canvas)
     app.enemy3.timerFired(app)
     
-    (x0,y0,x1,y1) = app.blocks[0].getBlockBounds(app)
-    canvas.create_rectangle(x0,y0,x1,y1,outline='orange', width = 5)
+    # (x0,y0,x1,y1) = app.blocks[0].getBlockBounds(app)
+    # canvas.create_rectangle(x0,y0,x1,y1,outline='orange', width = 5)
     # canvas.create_rectangle(app.enemy2.getXpos()-100,app.enemy2.getYpos()-90,app.enemy2.getXpos()+40,app.enemy2.getYpos(),outline='black')
 
 
@@ -179,47 +193,13 @@ def game_redrawAll(app, canvas):
         canvas.create_text(app.width//2,app.height//2,fill = 'white',
             text ='you are ready! click control-q to battle the boss KINGD')
     if app.isGameOver:
-        canvas.create_rectangle(app.width//4,app.height//4,
-            3*app.width//4, 3*app.height//4,fill = 'black')
-        canvas.create_text(app.width//2,app.height//2,fill = 'white',
-            text ='GAME OVER!')
-
-# def appStarted(app):
-#     app.boss = Boss('kingD',5,200,200)
-#     app.kirb = Kirby('normal',10,500,app.height*0.8)
-#     app.kirb.moveR = 40
-#     app.kirb.moveL = 40
-#     app.float = app.scaleImage(app.loadImage('fly.png'),3)
-#     app.floatL = app.float.transpose(Image.FLIP_LEFT_RIGHT)
-#     app.walk = app.scaleImage(app.loadImage('walk.png'),3)
-#     app.walkL = app.walk.transpose(Image.FLIP_LEFT_RIGHT)
-#     app.suck = app.scaleImage(app.loadImage('inhale.png'),3)
-#     app.suckL = app.suck.transpose(Image.FLIP_LEFT_RIGHT)
-#     app.fight = app.scaleImage(app.loadImage('attack.png'),3)
-#     app.fightL = app.fight.transpose(Image.FLIP_LEFT_RIGHT)
-#     app.knight = app.scaleImage(app.loadImage('knight.png'),3)
-#     app.knightR = app.knight.transpose(Image.FLIP_LEFT_RIGHT)
-#     app.chilly = app.scaleImage(app.loadImage('chilly.png'),3)
-#     app.metaknight = app.scaleImage(app.loadImage('metaknight.png'),3)
-#     app.bat = app.scaleImage(app.loadImage('bat.png'),3)
-#     app.monkey = app.scaleImage(app.loadImage('monkey.png'),3)
-#     app.kingJump = app.scaleImage(app.loadImage('kingDJump.png'),3)
-#     app.king = app.scaleImage(app.loadImage('kingD.png'),3)
-#     app.kingCrush = app.scaleImage(app.loadImage('kingDSmash.png'),3)
-#     app.kingCrushR = app.kingCrush.transpose(Image.FLIP_LEFT_RIGHT)
-#     app.block = app.scaleImage(app.loadImage('block.png'),6)
-#     app.badBlock = app.scaleImage(app.loadImage('badBlock.png'),6)
-#     app.lifeBlock = app.scaleImage(app.loadImage('life.png'),6)
-#     app.mystery = app.scaleImage(app.loadImage('mystery.png'),6)
-#     back = 'bossFight.jpeg' #this image was taken from https://www.deviantart.com/princesskirbyswirl/art/The-Magalor-final-boss-fight-background-851147131
-#     app.background = app.loadImage(back)
-#     app.blocks = []
-#     for i in range(10):
-#         app.blocks.append((lifeBlock('normal',(i+1)*250,400))) 
-#     app.scrollX = 0
-#     app.isGameOver = False
-#     app.kirb.nearbyEnemies.append(app.boss)
-
+        pass
+        # canvas.create_rectangle(app.width//4,app.height//4,
+        #     3*app.width//4, 3*app.height//4,fill = 'black')
+        # canvas.create_text(app.width//2,app.height//2,fill = 'white',
+        #     text ='GAME OVER!')
+    # (x0,y0,x1,y1) = app.bounds
+    # canvas.create_rectangle(x0,y0,x1,y1, outline = 'black', fill = 'yellow')
 def boss_timerFired(app):
     # app.kirb.timerFired(app)
     app.boss.timerFired(app)
@@ -229,6 +209,7 @@ def boss_timerFired(app):
 
 def boss_keyPressed(app, event):
     app.kirb.keyPressed(app,event)
+    app.boss.keyPressed(app,event)
 
 
 def boss_redrawAll(app, canvas):
@@ -238,19 +219,21 @@ def boss_redrawAll(app, canvas):
     # app.boss.timerFired(app)
     app.kirb.redrawAll(app,canvas)
     # app.kirb.timerFired(app)
-    for block in app.blocks:
-        block.redrawAll(app,canvas)
+    # for block in app.blocks:
+    #     block.redrawAll(app,canvas)
     
     if app.isGameOver:
-        canvas.create_rectangle(app.width//4,app.height//4,
-            3*app.width//4, 3*app.height//4,fill = 'black')
-        canvas.create_text(app.width//2,app.height//2,fill = 'white',
-            text ='GAME OVER!')
+        pass
+        # canvas.create_rectangle(app.width//4,app.height//4,
+        #     3*app.width//4, 3*app.height//4,fill = 'black')
+        # canvas.create_text(app.width//2,app.height//2,fill = 'white',
+        #     text ='GAME OVER!')
     elif app.boss.lives == 0:
-        canvas.create_rectangle(app.width//4,app.height//4,
-            3*app.width//4, 3*app.height//4,fill = 'black')
-        canvas.create_text(app.width//2,app.height//2,fill = 'white',
-            text ='YOU WIN!')
+        pass
+        # canvas.create_rectangle(app.width//4,app.height//4,
+        #     3*app.width//4, 3*app.height//4,fill = 'black')
+        # canvas.create_text(app.width//2,app.height//2,fill = 'white',
+        #     text ='YOU WIN!')
 
 runApp(width = 1000,height = 800)
 
